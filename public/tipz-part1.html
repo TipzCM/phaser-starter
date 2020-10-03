@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.24.0/dist/phaser.js"></script>
+</head>
+<body>
+
+    <script>
+        
+    var config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        physics: {
+        default: 'arcade',
+        arcade: {
+                gravity: {
+                    y: 300
+                },
+                debug: false
+            }
+        },
+        scene: {
+            preload: preload,
+            create: create,
+            update: update
+        }
+    };
+
+    var game = new Phaser.Game(config);
+
+    const starActions = {
+        /**
+         * This is just a click function on star click.
+         * Currently not used (included for illustration purposes)
+         **/
+        onStarClick: function(position, localX, localY, event) {
+
+
+            // console.log("x, y position on the actual star object");
+            // console.log(localX + ", " + localY);
+            // console.log("---------");
+            // console.log("x, y position on the world");
+            // console.log(pointer.x + ", " + pointer.y);
+            // console.log(event);
+        },
+        /**
+         * This handles the interaction of the game object.
+         * @param star - the gameObject of the star
+         *              (for documentation, see https://rexrainbow.github.io/phaser3-rex-notes/docs/site/gameobject/)
+         * @param isDragging - whether or not to the object is dragging
+         **/
+        handleStarInteraction: function(star, isDragging) {
+            star.body.allowGravity = !isDragging; // disable gravity if being dragged
+            star.body.enabled = isDragging;
+            if (isDragging) {
+                star.setTint(0x666666); // grey
+                star.body.velocity.x = 0;
+                star.body.velocity.y = 0;
+            }
+            else {
+                star.clearTint();
+            }
+        },
+        /**
+         * This adds controls to the star gameObject
+         * We'll add the ability to drag and drop a star.
+         * 
+         **/ 
+        addStarControl: function(star) {
+            star.setDataEnabled();
+
+            // we'll enable click/drag events
+            // touch events documentation https://rexrainbow.github.io/phaser3-rex-notes/docs/site/touchevents/
+            star.setInteractive({draggable: true})
+                .on('pointerdown', starActions.onStarClick) // This is just the click event on a single star
+                .on('dragstart', (pointer, dragX, dragY) => {
+                    // drag starts here
+                    star.setData('dragging', true);
+                    starActions.handleStarInteraction(star, true);
+                })
+                .on('drag', (pointer, dragX, dragY) => {
+                    // moving the object
+                    star.setPosition(dragX, dragY);
+                })
+                .on('dragend', (pointer, dragX, dragY, dropped) => {
+                    // when you release it
+                    star.setData('dragging', false);
+                    starActions.handleStarInteraction(star, false);
+                });
+        }
+    }
+
+    function preload() {
+        this.load.image('sky', 'assets/sky.png');
+        this.load.image('ground', 'assets/platform.png');
+        this.load.image('star', 'assets/star.png');
+    }
+
+    function create() {
+        //  A simple background for our game
+        this.add.image(400, 300, 'sky');
+
+        //  The platforms group contains the ground and the 2 ledges we can jump on
+        platforms = this.physics.add.staticGroup();
+
+        //  Here we create the ground.
+        //  Scale it to fit the width of the game (the original sprite is 400x32 in size)
+        platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+        
+        //  Now let's create some ledges
+        platforms.create(600, 400, 'ground');
+        platforms.create(50, 250, 'ground');
+        platforms.create(750, 220, 'ground');
+
+        //  Some stars to collect, 12 in total, evenly spaced 70 pixels apart along the x axis
+        stars = this.physics.add.group({
+            key: 'star',
+            repeat: 11,
+            setXY: { x: 12, y: 0, stepX: 70 }
+        });
+
+        stars.children.iterate(function (child) {
+
+            //  Give each star a slightly different bounce
+            child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+
+            // we'll add some controls to this star
+            // (drag controls!)
+            starActions.addStarControl(child);
+        });
+
+        // physics for starts
+        this.physics.add.collider(stars, platforms);
+
+        // this is the click event on anything in the world
+        // this.input.on('pointerdown', (pointer) => {
+        //     console.log(pointer.x + ", " + pointer.y);
+        // });
+    }
+
+    function update() {
+
+    }
+    </script>
+</body>
+</html>
